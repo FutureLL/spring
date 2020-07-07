@@ -220,7 +220,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 */
 	public <T> T getBean(String name, @Nullable Class<T> requiredType, @Nullable Object... args)
 			throws BeansException {
-
+		/**
+		 * 这里又是一个空方法
+		 */
 		return doGetBean(name, requiredType, args, false);
 	}
 
@@ -239,10 +241,26 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected <T> T doGetBean(final String name, @Nullable final Class<T> requiredType,
 			@Nullable final Object[] args, boolean typeCheckOnly) throws BeansException {
 
+		/**
+		 * 通过 name 获取 beanName。这里b不使用 name 直接作为 beanName 有两个原因:
+		 * 1、name 可能会以 & 字符开头,表明调用者想获取 FactoryBean 本身,而非 FactoryBean
+		 * 	  实现类所创建的 bean。在 BeanFactory 中,FactoryBean 的实现类和其他的 bean 存储
+		 * 	  方式是一致的,即 <beanName, bean>,beanName 中没有 & 这个字符的。所以我们需要
+		 * 	  将 name 的首字符 & 移除,这样才能从缓存中取到 FactoryBean 实例。
+		 * 2、还是别名的问题,转移需要
+		 */
 		final String beanName = transformedBeanName(name);
 		Object bean;
 
 		// Eagerly check singleton cache for manually registered singletons.
+		/**
+		 * 从 Spring 的 Bean 容器中获取一个 bean,由于 Spring 中 bean 容器是一个map(后面会有证明)
+		 * 所以你可以理解 getSingleton(beanName) == beanMap.get(beanName)
+		 * 这里需要注意的是,这个方法会被调用两次
+		 * 什么意思?
+		 * 这个方法会在 Spring 环境初始化的时候 (就是对象被创建的时候调用一次) 调用一次
+		 * 还会在 getBean() 的时候调用一次
+		 */
 		Object sharedInstance = getSingleton(beanName);
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
