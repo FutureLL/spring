@@ -1,8 +1,7 @@
 package com.future.test;
 
 import com.future.app.Appconfig;
-import com.future.dao.Dao;
-import com.future.dao.IndexDaoImpl;
+import com.future.dao.IndexDao;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 /**
@@ -17,7 +16,12 @@ public class Test {
 	public static void main(String[] args) {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Appconfig.class);
 
-		Dao dao = context.getBean(IndexDaoImpl.class);
+		// register(): Register one or more component classes to be processed.
+		context.register(IndexDao.class);
+		// scan(): Perform a scan within the specified base packages.
+		context.scan("com.future");
+
+		IndexDao dao = context.getBean(IndexDao.class);
 
 		dao.query("query");
 	}

@@ -1,5 +1,6 @@
 package com.future.dao;
 
+import org.springframework.context.annotation.Description;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -10,9 +11,9 @@ import org.springframework.stereotype.Repository;
  * @modified By:
  */
 @Repository("indexDaoImpl")
-public class IndexDaoImpl implements Dao {
+@Description("描述 IndexDaoImpl")
+public class IndexDao {
 
-	@Override
 	public void query(String str) {
 		System.out.println(str);
 	}

@@ -223,6 +223,11 @@ public abstract class AnnotationConfigUtils {
 			return (DefaultListableBeanFactory) registry;
 		}
 		else if (registry instanceof GenericApplicationContext) {
+			/**
+			 * 这里再 AnnotationConfigApplicationContext 初始化的时候 this() 方法中调用了
+			 * 父类 GenericApplicationContext 的时候 new 了一个 DefaultListableBeanFactory 对象
+			 * 下面代码返回这个对象
+			 */
 			return ((GenericApplicationContext) registry).getDefaultListableBeanFactory();
 		}
 		else {
