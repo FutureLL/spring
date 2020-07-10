@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
  * @modified By:
  */
 @Configuration
-@ComponentScan("com.future.dao")
+@ComponentScan("com.future")
 public class Appconfig {
 
 }

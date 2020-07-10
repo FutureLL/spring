@@ -58,6 +58,14 @@ public class AnnotatedBeanDefinitionReader {
 
 
 	/**
+	 * 这里的 BeanDefinitionRegistry registry 是通过在 AnnotationConfigApplicationContext 的构造方法中传进来的 this()
+	 * 由此说明 AnnotationConfigApplicationContext 是一个 BeanDefinitionRegistry 类型的类
+	 * 何以保证我们可以看到 AnnotationConfigApplicationContext 的类关系
+	 * GenericApplicationContext extends AbstractApplicationContext implements BeanDefinitionRegistry
+	 * 看到它实现了 BeanDefinitionRegistry,证明上面的说法,那么 BeanDefinitionRegistry 的作用是什么呢?
+	 * BeanDefinitionRegistry 顾名思义就是 BeanDefinition 的注册器
+	 * 那么何为 BeanDefinition 呢? 参考 BeanDefinition 的源码注释
+	 *
 	 * Create a new {@code AnnotatedBeanDefinitionReader} for the given registry.
 	 * <p>If the registry is {@link EnvironmentCapable}, e.g. is an {@code ApplicationContext},
 	 * the {@link Environment} will be inherited, otherwise a new
@@ -81,8 +89,8 @@ public class AnnotatedBeanDefinitionReader {
 	 * @since 3.1
 	 */
 	public AnnotatedBeanDefinitionReader(BeanDefinitionRegistry registry, Environment environment) {
-		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
-		Assert.notNull(environment, "Environment must not be null");
+		// Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
+		// Assert.notNull(environment, "Environment must not be null");
 		this.registry = registry;
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
@@ -143,6 +151,7 @@ public class AnnotatedBeanDefinitionReader {
 	 * @param beanClass the class of the bean
 	 */
 	public void registerBean(Class<?> beanClass) {
+		// 空壳方法
 		doRegisterBean(beanClass, null, null, null);
 	}
 
@@ -217,12 +226,12 @@ public class AnnotatedBeanDefinitionReader {
 		/**
 		 * 根据指定的 bean 创建一个 AnnotatedGenericBeanDefinition
 		 * 这个 AnnotatedGenericBeanDefinition 可以理解为一个数据结构
-		 * AnnotatedGenericBeanDefinition 包含了类的其他信息,比如一些元信息
-		 * scope, lazy 等等
+		 * AnnotatedGenericBeanDefinition 包含了类的其他信息,比如一些元信息, scope, lazy 等等
 		 */
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
 		/**
 		 * 判断这个类是否需要跳过解析
+		 * 通过代码可以知道 Spring 判断是否跳过解析,主要判断类有没有加注解
 		 */
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
@@ -250,15 +259,27 @@ public class AnnotatedBeanDefinitionReader {
 		 * 处理完成之后 processCommonDefinitionAnnotations 中依然是把他添加到数据结构中
 		 */
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
+
+		/**
+		 * 如果在向容器注册注解 Bean 定义时,使用了额外的限定符注解则解析
+		 * 这里需要注意
+		 * 	   byName 和 qualifiers 这个变量是 Annotation 类型的数组,里面存的不仅仅是 Qualifier 注解
+		 * 	   理论上里面存的是一切注解,所以可以看到下面的代码 Spring 去循环了这个数组,然后依次判断了
+		 * 	   注解当中是否包含了 Primary,是否包含了 Lazy
+		 * 我们这里的 qualifiers 始终为 null,因为调用 doRegisterBean() 的时候设置的参数 qualifiers 为 null
+		 */
 		if (qualifiers != null) {
 			for (Class<? extends Annotation> qualifier : qualifiers) {
+				// 如果配置了 @Primary 注解,如果加了则作为首选
 				if (Primary.class == qualifier) {
 					abd.setPrimary(true);
 				}
+				// 懒加载
 				else if (Lazy.class == qualifier) {
 					abd.setLazyInit(true);
 				}
 				else {
+					// 如果使用了除 @Primary 和 @Lazy 的其他注解,则为该 Bean 添加一个根据名字自动装配的限定符
 					abd.addQualifier(new AutowireCandidateQualifier(qualifier));
 				}
 			}
@@ -267,8 +288,23 @@ public class AnnotatedBeanDefinitionReader {
 			customizer.customize(abd);
 		}
 
+		/**
+		 * 这个 BeanDefinitionHolder 也是一个数据结构
+		 * 可以将 BeanDefinition 看成一个 map,里边的 key 为 abd,value 为 beanName
+		 */
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
+		/**
+		 * ScopedProxyMode 这个知识点比较复杂,需要结合 web 理解
+		 */
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+		/**
+		 * 把上述的这个数据结构注册到 registry
+		 * registry 就是 AnnotationConfigApplicationContext
+		 * AnnotationConfigApplicationContext 在初始化的时候通过调用父类的构造方法实例化一个 DefaultListableBeanFactory
+		 * registerBeanDefinition 里面就是把 definitionHolder 这个数据结构包含的信息注册到 DefaultListableBeanFactory 这个工厂
+		 */
+		// this.beanDefinitionMap.put(beanName, beanDefinition);
+		// this.beanDefinitionNames.add(beanName);
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
 	}
 

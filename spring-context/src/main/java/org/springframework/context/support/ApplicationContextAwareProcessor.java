@@ -35,6 +35,7 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.StringValueResolver;
 
 /**
+ * 这个类挺复杂的先看他实现的接口 BeanPostProcessor,再看下面的注释
  * {@link org.springframework.beans.factory.config.BeanPostProcessor}
  * implementation that passes the ApplicationContext to beans that
  * implement the {@link EnvironmentAware}, {@link EmbeddedValueResolverAware},
@@ -73,7 +74,6 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 		this.embeddedValueResolver = new EmbeddedValueResolver(applicationContext.getBeanFactory());
 	}
 
-
 	@Override
 	@Nullable
 	public Object postProcessBeforeInitialization(final Object bean, String beanName) throws BeansException {
@@ -86,6 +86,7 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 			acc = this.applicationContext.getBeanFactory().getAccessControlContext();
 		}
 
+		// 当对象 acc 不为空时,调用了 invokeAwareInterfaces() 方法
 		if (acc != null) {
 			AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
 				invokeAwareInterfaces(bean);
@@ -116,12 +117,22 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 			if (bean instanceof MessageSourceAware) {
 				((MessageSourceAware) bean).setMessageSource(this.applicationContext);
 			}
+			// Spring 帮你 set 一个 applicationContext
+			// 所以当我们自己的一个对象实现了 ApplicationContextAware 对象只需要提供 setter 就能得到 applicationContext
 			if (bean instanceof ApplicationContextAware) {
-				((ApplicationContextAware) bean).setApplicationContext(this.applicationContext);
+				if (!bean.getClass().getSimpleName().equals("IndexDao")) {
+					((ApplicationContextAware) bean).setApplicationContext(this.applicationContext);
+				}
 			}
 		}
 	}
 
+	/**
+	 * postProcessAfterInitialization(): 什么都没做
+	 * @param bean the new bean instance
+	 * @param beanName the name of the bean
+	 * @return
+	 */
 	@Override
 	public Object postProcessAfterInitialization(Object bean, String beanName) {
 		return bean;

@@ -79,7 +79,16 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 */
 	public AnnotationConfigApplicationContext() {
 		/**
-		 * 创建一个读取注解的Bean定义读取器
+		 * 父类的构造方法
+		 *
+		 * 创建一个读取注解的Bean定义读取器(AnnotatedBeanDefinitionReader)
+		 * AnnotatedBeanDefinition 继承了 BeanDefinition
+		 * 什么是 Bean 定义? BeanDefinition
+		 * 	   1、我们定义了一个类 Test,在 Java 中使用 Class 来表示这个类
+		 * 	   2、Spring 中的 bean,使用 BeanDefinition 来描述,
+		 * 	   	  相当于模仿了 Class,因为 Class 类中定义的方法无法描述 Spring 中的 Bean
+		 * 	   3、Bean 属于 Class,但是 Class 不属于 Bean,Bean 要比 Class 范围更广
+		 * reader: 用来读取被加了注解的类
 		 */
 		this.reader = new AnnotatedBeanDefinitionReader(this);
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
@@ -107,6 +116,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		// 这里由于他有父类,故而会先调用父类的构造方法,然后才会调用自己的构造方法
 		// 在自己构造方法中初始一个读取器和扫描器
 		this();
+		// componentClasses 表示配置类,此时表示 Appconfig.class
 		register(componentClasses);
 		refresh();
 	}
@@ -171,6 +181,8 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * 注册单个 Bean 给容器
 	 * 比如有新加的类可以使用这个方法
 	 * 但是注册之后需要手动调用 refresh() 方法去触发容器解析注解
+	 *
+	 * 有两个意思,可以注册一个配置类,也可以单独注册一个 Bean
 	 *
 	 * Register one or more component classes to be processed.
 	 * <p>Note that {@link #refresh()} must be called in order for the context
