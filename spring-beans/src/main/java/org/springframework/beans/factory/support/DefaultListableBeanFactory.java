@@ -945,20 +945,25 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				// Still in startup registration phase
 				/**
 				 * this 表示: DefaultListableBeanFactory 类
-				 * 刚刚的 beanFactoryHolder 没有任何作用,就是做一个参数传递的功能,
-				 * 	   这里又进行了拆分 beanName, beanDefinition
+				 * 刚刚的 beanFactoryHolder 没有任何作用,就是做一个参数传递的功能,这里又进行了拆分 beanName, beanDefinition
 				 * BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
 				 *
 				 * DefaultListableBeanFactory 这个类中包含一个 Map(beanDefinitionMap) 和一个 List(beanDefinitionNames)
 				 *
-				 * beanDefinitionMap 中包含7个类:
+				 * beanDefinitionMap 中包含6个固定类(5.0.x):
 				 * org.springframework.context.annotation.internalConfigurationAnnotationProcess
 				 * org.springframework.context.event.internalEventListenerFactory
 				 * org.springframework.context.event.internalEventListenerProcessor
 				 * org.springframework.context.annotation.internalAutowiredAnnotationProcessor
 				 * org.springframework.context.annotation.internalCommonAnnotationProcessor
 				 * org.springframework.context.annotation.internalRequiredAnnotationProcessor
-				 * indexDao
+				 *
+				 * beanDefinitionMap 中包含5个固定类(5.1.x):
+				 * org.springframework.context.annotation.internalAutowiredAnnotationProcessor
+				 * org.springframework.context.event.internalEventListenerFactory
+				 * org.springframework.context.annotation.internalConfigurationAnnotationProcessor
+				 * org.springframework.context.event.internalEventListenerProcessor
+				 * org.springframework.context.annotation.internalCommonAnnotationProcessor
 				 *
 				 * 注意: Spring5.0.x 中会有 internalRequiredAnnotationProcessor,Spring 5.1.x 中没有
 				 */

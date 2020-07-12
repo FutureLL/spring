@@ -531,9 +531,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// 这个方法在当前版本的 Spring 是没有任何方法的
 				// 可能会在之后的版本进行扩展
 				postProcessBeanFactory(beanFactory);
-
 				// Invoke factory processors registered as beans in the context.
-				// 设置执行自定义的 ProcessBeanFactory
+				// 在 Spring 环境中去执行已经被注册的 factory processor
+				// 设置执行自定义的 ProcessBeanFactory 和 Spring 内部自定义的
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
@@ -656,14 +656,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		// Tell the internal bean factory to use the context's class loader etc.
 		beanFactory.setBeanClassLoader(getClassLoader());
-		// bean 表达式解释器
+		// bean 表达式解释器,能够获取 bean 当中的属性在前台页面
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
-
+		// 对象与 String 类型的转换 <property ref="dao"></property>
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
 		// 添加一个后置处理器
 		// 其中 ApplicationContextAwareProcessor 实现了 BeanPostProcessor 接口
+		// 能够在bean中获得各种 *Aware(*Aware 都有其作用)
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 		//
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
@@ -675,6 +676,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// BeanFactory interface not registered as resolvable type in a plain factory.
 		// MessageSource registered (and found for autowiring) as a bean.
+		// 类的替换
 		beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
 		beanFactory.registerResolvableDependency(ResourceLoader.class, this);
 		beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
@@ -690,6 +692,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
 		}
 
+		/**
+		 * 意思是如果自定义的 bean 中没有名为 "systemProperties" 和 "systemEnvironment" 的 Bean,
+		 * 则注册两个 Bean,Key 为 "systemProperties" 和 "systemEnvironment",Value 为 Map,
+		 * 这两个 Bean 就是一些系统配置和系统环境信息
+		 */
 		// Register default environment beans.
 		if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
 			beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
@@ -718,7 +725,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * <p>Must be called before singleton instantiation.
 	 */
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
-		// 这个地方需要注意 getBeanFactoryPostProcessors() 是获取自定义的
+		// 这个地方需要注意 getBeanFactoryPostProcessors() 是获取手动给 Spring 的 BeanFactoryPostProcessor
+		// 自定义并不仅仅是程序员自己写的
+		// 自己写的可以加 @Component 也可以不加
+		// 如果加了 getBeanFactoryPostProcessors() 这个地方得不到,是 Spring 自己扫描的
+		// 为什么???因为 getBeanFactoryPostProcessors() 方法是直接获取一个 list
+		// 这个 list 是在 AnnotationConfigApplicationContext 被定义的
+		// 所谓的自定义的就是手动调用 AbstractApplicationContext.addBeanFactoryPostProcessor()
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime

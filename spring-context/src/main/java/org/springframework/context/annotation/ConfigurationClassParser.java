@@ -160,6 +160,7 @@ class ConfigurationClassParser {
 
 
 	public void parse(Set<BeanDefinitionHolder> configCandidates) {
+		// 根据 BeanDefinition 的类型,做不同的处理,一般会调用 ConfigurationClassParser#parse 进行解析
 		for (BeanDefinitionHolder holder : configCandidates) {
 			BeanDefinition bd = holder.getBeanDefinition();
 			try {
@@ -219,6 +220,7 @@ class ConfigurationClassParser {
 			return;
 		}
 
+		// 处理 Import 的情况
 		ConfigurationClass existingClass = this.configurationClasses.get(configClass);
 		if (existingClass != null) {
 			if (configClass.isImported()) {
@@ -242,7 +244,7 @@ class ConfigurationClassParser {
 			sourceClass = doProcessConfigurationClass(configClass, sourceClass);
 		}
 		while (sourceClass != null);
-
+		// 一个 map,用来存放扫描出来的 bean(注意这里的 bean 不是对象,仅仅 bean 的信息,因为还没有实例化到这一步)
 		this.configurationClasses.put(configClass, configClass);
 	}
 
@@ -260,6 +262,7 @@ class ConfigurationClassParser {
 
 		if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
 			// Recursively process any member (nested) classes first
+			// 处理内部类
 			processMemberClasses(configClass, sourceClass);
 		}
 
@@ -286,6 +289,7 @@ class ConfigurationClassParser {
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
+				// 检查扫描出来的类当中是否还有 Configuration
 				for (BeanDefinitionHolder holder : scannedBeanDefinitions) {
 					BeanDefinition bdCand = holder.getBeanDefinition().getOriginatingBeanDefinition();
 					if (bdCand == null) {
@@ -299,6 +303,7 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @Import annotations
+		// 处理 @Import
 		processImports(configClass, sourceClass, getImports(sourceClass), true);
 
 		// Process any @ImportResource annotations
