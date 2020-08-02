@@ -122,19 +122,23 @@ abstract class ConfigurationClassUtils {
 		 */
 
 		// 判断当前这个 bd 中存在的类是不是加了 @Configuration
+		// 如果存在 @Configuration 注解,则 Spring 认为他是一个全注解的类
 		// isFullConfigurationCandidate(): return metadata.isAnnotated(Configuration.class.getName());
+		// 如果没有加 @Configuration 注解,那么就不会走 if 条件判断
 		if (isFullConfigurationCandidate(metadata)) {
-			// 如果存在 Configuration 注解,则为 BeanDefinition 设置 configurationClass 属性为 full
+			// 如果存在 @Configuration 注解,则为 BeanDefinition 设置 configurationClass 属性为 full
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
-		// 判断是否加了以下注解,摘录 isLiteConfigurationCandidate() 源码
+		// 如果没有加 @Configuration,那么判断是否加了以下注解,摘录 isLiteConfigurationCandidate() 源码
 		/**
 		 * candidateIndicators.add(Component.class.getName());
 		 * candidateIndicators.add(ComponentScan.class.getName());
 		 * candidateIndicators.add(Import.class.getName());
 		 * candidateIndicators.add(ImportResource.class.getName());
 		 */
+		// 如果不存在 @Configuration 注解,则 Spring 认为他是一个部分注解类
 		else if (isLiteConfigurationCandidate(metadata)) {
+			// 如果存在上述的四个注解,则为 BeanDefinition 设置 configurationClass 属性为 lite
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}
 		else {
@@ -187,6 +191,8 @@ abstract class ConfigurationClassUtils {
 		}
 
 		// Any of the typical annotations found?
+		// 这里判断了是否使用了四个注解
+		// @Component、@ComponentScan、@Import、@ImportResource
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;

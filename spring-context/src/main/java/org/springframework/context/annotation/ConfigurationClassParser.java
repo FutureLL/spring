@@ -165,6 +165,9 @@ class ConfigurationClassParser {
 			BeanDefinition bd = holder.getBeanDefinition();
 			try {
 				if (bd instanceof AnnotatedBeanDefinition) {
+					// 解析注解对象,并且把解析出来的 bd 放到 map,但是这里的 bd 是指普通的
+					// 何谓普通呢? 比如 @Bean 和各种 beanFactoryPostProcessor 得到的 bean 不在这里 put
+					// 但是是这里的解析,只是不 put 而已
 					parse(((AnnotatedBeanDefinition) bd).getMetadata(), holder.getBeanName());
 				}
 				else if (bd instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) bd).hasBeanClass()) {
@@ -220,7 +223,8 @@ class ConfigurationClassParser {
 			return;
 		}
 
-		// 处理 Import 的情况
+		// 处理 Imported 的情况
+		// 就是当前注解类有没有被其他类 Import
 		ConfigurationClass existingClass = this.configurationClasses.get(configClass);
 		if (existingClass != null) {
 			if (configClass.isImported()) {
@@ -239,12 +243,14 @@ class ConfigurationClassParser {
 		}
 
 		// Recursively process the configuration class and its superclass hierarchy.
+		// 递归处理配置类及其超类层次结构。
 		SourceClass sourceClass = asSourceClass(configClass);
 		do {
+			// 处理配置类
 			sourceClass = doProcessConfigurationClass(configClass, sourceClass);
 		}
 		while (sourceClass != null);
-		// 一个 map,用来存放扫描出来的 bean(注意这里的 bean 不是对象,仅仅 bean 的信息,因为还没有实例化到这一步)
+		// 一个 map,用来存放扫描出来的 bean (注意这里的 bean 不是对象,仅仅 bean 的信息,因为还没有实例化到这一步)
 		this.configurationClasses.put(configClass, configClass);
 	}
 
@@ -286,6 +292,9 @@ class ConfigurationClassParser {
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
+				// 扫描普通类 == componentScan == com.future
+				// 这里扫描出所有的 @Component
+				// 并且把扫描出来的普通类放到map当中
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
@@ -295,6 +304,7 @@ class ConfigurationClassParser {
 					if (bdCand == null) {
 						bdCand = holder.getBeanDefinition();
 					}
+					// 检查 todo
 					if (ConfigurationClassUtils.checkConfigurationClassCandidate(bdCand, this.metadataReaderFactory)) {
 						parse(bdCand.getBeanClassName(), holder.getBeanName());
 					}
@@ -302,8 +312,31 @@ class ConfigurationClassParser {
 			}
 		}
 
+		/**
+		 * 上面的代码就是扫描普通类 --- @Component
+		 * 并且放到了 map 当中
+		 */
+
 		// Process any @Import annotations
-		// 处理 @Import
+		// 处理 @Import Import 三种情况
+		// ImportSelector
+		// ImportBeanDefinitionRegistrar
+		// 普通类 @Component
+		// 这里和内部递归调用时候的情况不同
+
+		/**
+		 * 这里处理的import是需要判断我们类当中是否有@Import注解
+		 * r如果有就把@Import注解中的值拿出来,是一个类
+		 * 比如@Import(XXXX.class),那么这里便把XXXX传进去进行解析
+		 * 在解析的过程中如果发觉是一个importSelector,那么就会去回调selector的方法
+		 * 返回一个字符串(类名),通过这个字符串可以得到一个类
+		 * 继而在递归调用本方法来处理这个方类
+		 *
+		 * 这里的 processImports() 方法,仅仅是判断一组类,是不是 Imports(3种 Import)
+		 * @Import(MyImportSelector.class) 注解中的 MyImportSelector 类的获得,
+		 * 不是在这个方法中完成的,而是作为这个方法的参数去传递的 getImports(sourceClass)
+		 *
+		 */
 		processImports(configClass, sourceClass, getImports(sourceClass), true);
 
 		// Process any @ImportResource annotations
@@ -558,9 +591,11 @@ class ConfigurationClassParser {
 			this.importStack.push(configClass);
 			try {
 				for (SourceClass candidate : importCandidates) {
+					// 判断是不是 ImportSelector.class
 					if (candidate.isAssignable(ImportSelector.class)) {
 						// Candidate class is an ImportSelector -> delegate to it to determine imports
 						Class<?> candidateClass = candidate.loadClass();
+						// 反射实现一个对象
 						ImportSelector selector = BeanUtils.instantiateClass(candidateClass, ImportSelector.class);
 						ParserStrategyUtils.invokeAwareMethods(
 								selector, this.environment, this.resourceLoader, this.registry);
@@ -568,26 +603,43 @@ class ConfigurationClassParser {
 							this.deferredImportSelectorHandler.handle(configClass, (DeferredImportSelector) selector);
 						}
 						else {
+							// 回调
+							// 这里会得到实现 ImportSelector 类的返回值,得到一个或者多个类
 							String[] importClassNames = selector.selectImports(currentSourceClass.getMetadata());
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames);
+							// 递归这里是第二次调用 processImports
+							// 依次解析这些类,看这些类当中有没有 Import,递归调用 processImports() 方法
+							// 也就是说如果是一个普通类,那么会进入 else
+							// 这里是判断 IndexDao3 是否含有 @Import 注解
 							processImports(configClass, currentSourceClass, importSourceClasses, false);
 						}
 					}
+
+					// 判断是不是 ImportBeanDefinitionRegistrar.class
 					else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
 						// Candidate class is an ImportBeanDefinitionRegistrar ->
 						// delegate to it to register additional bean definitions
 						Class<?> candidateClass = candidate.loadClass();
-						ImportBeanDefinitionRegistrar registrar =
-								BeanUtils.instantiateClass(candidateClass, ImportBeanDefinitionRegistrar.class);
+						// instantiateClass(): 注册 ImportBeanDefinitionRegistrar
+						ImportBeanDefinitionRegistrar registrar = BeanUtils.instantiateClass(candidateClass, ImportBeanDefinitionRegistrar.class);
 						ParserStrategyUtils.invokeAwareMethods(
 								registrar, this.environment, this.resourceLoader, this.registry);
+						// 添加到一个 List 当中和 importSelector 不同
+						// 放到变量名为 importBeanDefinitionRegistrars 的 Map 中
 						configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
 					}
 					else {
 						// Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
 						// process it as an @Configuration class
+						// 否则,加入到 importStack 后调用 processConfigurationClass 进行处理
+						// processConfigurationClass 里边主要就是把类放到 configurationClasses
+						// configurationClasses 是一个集合,会在后边拿出来解析成 bd,继而注册
+						// 可以看到普通类在扫描出来的时候就被注册了
+						// 如果是 ImportSelector,会先放到 configurationClasses 后面进行注册
+						// 注意这里的 processConfigurationClass 前面已经解析过这个方法
 						this.importStack.registerImport(
 								currentSourceClass.getMetadata(), candidate.getMetadata().getClassName());
+						// 重要: 放到 map 中
 						processConfigurationClass(candidate.asConfigClass(configClass));
 					}
 				}

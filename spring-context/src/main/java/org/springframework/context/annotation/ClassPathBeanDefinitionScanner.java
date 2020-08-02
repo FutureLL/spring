@@ -273,18 +273,40 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
 			// 扫描 basePackage 路径下的 Java 文件
-			// 并把它转成 BeanDefinition 类型
+			// 符合条件的并把它转成 BeanDefinition 类型
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
+
 			for (BeanDefinition candidate : candidates) {
 				// 解析 Scope 属性
 				ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(candidate);
 				candidate.setScope(scopeMetadata.getScopeName());
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
+				// 会进入这个 if 判断
+				/**
+				 * 因为上几行代码的 findCandidateComponents() 中会创建如下的类 ScannedGenericBeanDefinition,
+				 * ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
+				 * ScannedGenericBeanDefinition extends GenericBeanDefinition
+				 * GenericBeanDefinition extends AbstractBeanDefinition
+				 */
 				if (candidate instanceof AbstractBeanDefinition) {
-					// 如果这个类是 AbstractBeanDefinition
+					// 如果这个类是 AbstractBeanDefinition 的子类
 					// 则为他设置默认值,比如: Lazy,Init,Destroy
+					// 属性填充
+					/**
+					 * 代码解析过程中已经设置了 Lazy,但那个 Lazy 只是标识了一下,还没有设置,
+					 * 会在如下的 postProcessBeanDefinition() 方法中设置
+					 * boolean lazyInit = componentScan.getBoolean("lazyInit");
+					 * if (lazyInit) {
+					 *     scanner.getBeanDefinitionDefaults().setLazyInit(true);
+					 * }
+					 *
+					 * 我们将 appconfig == false,但是在这个时候 还没有bd,也就是说此时 bd 中的仅仅是标识了一下
+					 * xxx == false,当在后边进行循环的时候,就会将 bd 中的 Lazy == xxx
+					 */
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
+				// 如果 Lazy 等注解在类中进行了配置,那么把其中的值拿出来给这个类,如果没有配置那么加默认的
+				// 也就是没有加进入上边的 if,加了进入下边的 if
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					// 检查并且处理常用的注解
 					// 这里的处理主要是把常用注解的值设置到 AnnotatedBeanDefinition 当中
@@ -296,6 +318,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);
+					// 加入到 map 当中去
 					registerBeanDefinition(definitionHolder, this.registry);
 				}
 			}
@@ -310,6 +333,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * @param beanName the generated bean name for the given bean
 	 */
 	protected void postProcessBeanDefinition(AbstractBeanDefinition beanDefinition, String beanName) {
+		// applyDefaults(): Apply the provided default values to this bean.
 		beanDefinition.applyDefaults(this.beanDefinitionDefaults);
 		if (this.autowireCandidatePatterns != null) {
 			beanDefinition.setAutowireCandidate(PatternMatchUtils.simpleMatch(this.autowireCandidatePatterns, beanName));

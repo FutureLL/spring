@@ -134,6 +134,8 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
+		// 如果一个类是被 Import 的,则会被 Spring 标注
+		// 	在这里完成中注册
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
@@ -141,7 +143,10 @@ class ConfigurationClassBeanDefinitionReader {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
+		// xml
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+
+		// 注册 ImportBeanDefinitionRegistrar
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 
@@ -360,6 +365,7 @@ class ConfigurationClassBeanDefinitionReader {
 	}
 
 	private void loadBeanDefinitionsFromRegistrars(Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> registrars) {
+		// 循环的方式进行注册
 		registrars.forEach((registrar, metadata) ->
 				registrar.registerBeanDefinitions(metadata, this.registry));
 	}

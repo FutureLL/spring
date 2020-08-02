@@ -515,11 +515,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	public void refresh() throws BeansException, IllegalStateException {
 		synchronized (this.startupShutdownMonitor) {
 			// Prepare this context for refreshing.
-			// 准备工作包括设置启动时间,是否激活标识位,初始化属性源(property source)配置
+			// 准备工作包括设置启动时间,是否激活标识位,
+			// 初始化属性源(property source)配置
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
-			// 子类可以获取到 BeanFactory
+			// 子类可以获取到 BeanFactory,要对工厂进行初始化
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
@@ -729,7 +730,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// 自定义并不仅仅是程序员自己写的
 		// 自己写的可以加 @Component 也可以不加
 		// 如果加了 getBeanFactoryPostProcessors() 这个地方得不到,是 Spring 自己扫描的
-		// 为什么???因为 getBeanFactoryPostProcessors() 方法是直接获取一个 list
+		// 为什么??? 因为 getBeanFactoryPostProcessors() 方法是直接获取一个 list
 		// 这个 list 是在 AnnotationConfigApplicationContext 被定义的
 		// 所谓的自定义的就是手动调用 AbstractApplicationContext.addBeanFactoryPostProcessor()
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());

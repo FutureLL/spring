@@ -66,6 +66,9 @@ public class AnnotatedBeanDefinitionReader {
 	 * BeanDefinitionRegistry 顾名思义就是 BeanDefinition 的注册器
 	 * 那么何为 BeanDefinition 呢? 参考 BeanDefinition 的源码注释
 	 *
+	 * 还做了一件很重要的事情,它会往 Spring 工厂里边 beanMap 中添加 6 个基本的类(Spring5.0.x 是6个,Spring5.1.x 是5个),
+	 * 其中有一个非常重要的类 ConfigurationClassPostProcessor
+	 *
 	 * Create a new {@code AnnotatedBeanDefinitionReader} for the given registry.
 	 * <p>If the registry is {@link EnvironmentCapable}, e.g. is an {@code ApplicationContext},
 	 * the {@link Environment} will be inherited, otherwise a new
