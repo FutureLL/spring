@@ -101,7 +101,7 @@ final class PostProcessorRegistrationDelegate {
 
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
 			// BeanDefinitionRegistryPostProcessor 等于 BeanFactoryPostProcessors
-			// getBeanNamesForType() 根据 bean 的 Type 类型获取 bean 的名字
+			// getBeanNamesForType() 根据 bean 的类型获取 bean 的名字 ConfigurationClassPostProcessor
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			// 这个地方可以得到一个 BeanFactoryPostProcessors,因为是 Spring 默认在最开始自己注册的
@@ -174,7 +174,8 @@ final class PostProcessorRegistrationDelegate {
 			// ConfigurationClassPostprocessor 这个类即属于子类,也属于父类,所以还要在处理一遍
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
 
-
+			// 执行所有自定义的 beanFactory
+			// 自定义 BeanFactoryPostProcessor
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
 		}
 
@@ -185,6 +186,7 @@ final class PostProcessorRegistrationDelegate {
 
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let the bean factory post-processors apply to them!
+		// ConfigurationClassPostProcessor
 		String[] postProcessorNames =
 				beanFactory.getBeanNamesForType(BeanFactoryPostProcessor.class, true, false);
 
@@ -235,6 +237,7 @@ final class PostProcessorRegistrationDelegate {
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 
+		// 从 beanDefinitionMap 中得到所有的 BeanPostProcessor
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
 		// Register BeanPostProcessorChecker that logs an info message when
@@ -355,6 +358,8 @@ final class PostProcessorRegistrationDelegate {
 	 * BeanPostProcessor that logs an info message when a bean is created during
 	 * BeanPostProcessor instantiation, i.e. when a bean is not eligible for
 	 * getting processed by all BeanPostProcessors.
+	 * 当 Spring 的配置中的后处理器还没有被注册就已经开始了bean的初始化
+	 * 便会打印出 BeanPostProcessorChecker 中设定的值
 	 */
 	private static final class BeanPostProcessorChecker implements BeanPostProcessor {
 
@@ -362,6 +367,7 @@ final class PostProcessorRegistrationDelegate {
 
 		private final ConfigurableListableBeanFactory beanFactory;
 
+		// 当前后置处理器的个数
 		private final int beanPostProcessorTargetCount;
 
 		public BeanPostProcessorChecker(ConfigurableListableBeanFactory beanFactory, int beanPostProcessorTargetCount) {

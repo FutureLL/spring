@@ -274,6 +274,7 @@ public class DependencyDescriptor extends InjectionPoint implements Serializable
 	public Object resolveCandidate(String beanName, Class<?> requiredType, BeanFactory beanFactory)
 			throws BeansException {
 
+		// org.springframework.beans.factory.support.AbstractBeanFactory.getBean
 		return beanFactory.getBean(beanName);
 	}
 

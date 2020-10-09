@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<!--<bean id="dao" class="com.future.dao.Dao">-->
+	<!--	<property name="name" value="parent"></property>-->
+	<!--</bean>-->
+	<!--<bean id="daoChildren" class="dao">-->
+	<!--	<property name="name" value="children"></property>-->
+	<!--</bean>-->
+
+	<bean id="indexDao" class="com.future.dao.IndexDao" factory-method="query">
+
+	</bean>
+
+</beans>

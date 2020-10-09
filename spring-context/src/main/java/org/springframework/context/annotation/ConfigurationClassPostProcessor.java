@@ -253,9 +253,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			processConfigBeanDefinitions((BeanDefinitionRegistry) beanFactory);
 		}
 
-		// 产生 CGLIB 代理
+		// 给配置类(@Configuration)产生 CGLIB 代理
 		// 为什么需要产生 CGLIB 代理
 		enhanceConfigurationClasses(beanFactory);
+		// 添加一个 BeanPostProcessor 后置处理器
 		beanFactory.addBeanPostProcessor(new ImportAwareBeanPostProcessor(beanFactory));
 	}
 
@@ -381,6 +382,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			 * configClasses 当中主要包含的是 importSelector
 			 * 因为 ImportBeanDefinitionRegistrar 在扫描出来的时候已经被添加到一个 list 当中去了
 			 */
+			// bd 到 map,除去普通了(加了@Commpont注解的类)
 			this.reader.loadBeanDefinitions(configClasses);
 			alreadyParsed.addAll(configClasses);
 
@@ -475,6 +477,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 				Class<?> configClass = beanDef.resolveBeanClass(this.beanClassLoader);
 				if (configClass != null) {
 					// 完成对全注解类的 CGLIB 代理
+					// 进入 enhance() 方法
 					Class<?> enhancedClass = enhancer.enhance(configClass, this.beanClassLoader);
 					if (configClass != enhancedClass) {
 						if (logger.isTraceEnabled()) {
@@ -512,6 +515,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 
 		@Override
 		public Object postProcessBeforeInitialization(Object bean, String beanName) {
+
 			if (bean instanceof ImportAware) {
 				ImportRegistry ir = this.beanFactory.getBean(IMPORT_REGISTRY_BEAN_NAME, ImportRegistry.class);
 				AnnotationMetadata importingClass = ir.getImportingClassFor(bean.getClass().getSuperclass().getName());

@@ -10,11 +10,10 @@ import org.springframework.stereotype.Repository;
  * @version: 1.0
  * @modified By:
  */
-@Component
-public class IndexDao implements Dao {
+// @Component
+public class IndexDao {
 
-	@Override
-	public void query() {
-		System.out.println("index");
+	public static Object query() {
+		return new Future();
 	};
 }

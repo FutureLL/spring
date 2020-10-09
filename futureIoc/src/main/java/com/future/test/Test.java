@@ -2,6 +2,7 @@ package com.future.test;
 
 import com.future.app.Appconfig;
 import com.future.dao.Dao;
+import com.future.dao.Future;
 import com.future.dao.IndexDao;
 import com.future.dao.IndexDao3;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -23,7 +24,9 @@ public class Test {
 		// 1、准备工厂 == DefaultListableBeanFactory
 		// 实例化一个 bdReader 和一个 scanner
 		// AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Appconfig.class);
-		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+
+		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Appconfig.class);
+
 		// 把一个 class 转成 bd,最后 put 到 map
 		// map 位置 DefaultListableBeanFactory 的属性 beanDefinitionMap
 		// register(): Register one or more component classes to be processed.
@@ -35,7 +38,8 @@ public class Test {
 		// refresh(): 初始化 Spring 的环境
 		context.refresh();
 
-		Appconfig appconfig = (Appconfig) context.getBean("appconfig");
+		System.out.println(context.getBean("indexDao"));
+		System.out.println(context.getBean(Future.class));
 
 		// 调用完 refresh() 就已经完成了扫描工作,但是完成这个扫描不是 AnnotationConfigApplicationContext 里面的 scanner
 
@@ -53,11 +57,11 @@ public class Test {
 
 		// IndexDaoImpl dao = context.getBean(IndexDaoImpl.class);
 		// IndexDaoImpl dao1 = context.getBean(IndexDaoImpl.class);
-		Dao dao = (Dao) context.getBean("indexDao");
+		// Dao dao = (Dao) context.getBean("indexDao");
 
 		// System.out.println(dao.hashCode());
 		// System.out.println(dao1.hashCode());
-		dao.query();
+		// dao.query();
 
 		// dao.query();
 	}

@@ -1,10 +1,11 @@
 package com.future.app;
 
 import com.future.anno.EnableFuture;
+import com.future.dao.Dao;
+import com.future.dao.IndexDao;
+import com.future.dao.IndexDao1;
 import com.future.imports.MyImportSelector;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.*;
 
 /**
  * @description:
@@ -35,10 +36,40 @@ import org.springframework.context.annotation.Import;
  * 	 									if (configClass.isImported()) {
  * 											registerBeanDefinitionForImportedConfigurationClass(configClass);
  *                						}
+ *
+ *
+ * 加了 @EnableAspectJAutoProxy 注解,Spring 就会加入一个后置处理器,专门用来处理 AOP,增强代理
  */
-// @Configuration
+
 @ComponentScan("com.future")
-@EnableFuture
+@Configuration
+@EnableAspectJAutoProxy
+@ImportResource("classpath:spring.xml")
 public class Appconfig {
 
+	// @Bean
+	// public IndexDao1 indexDao1() {
+	// 	return new IndexDao1();
+	// }
+
+	// @Bean
+	// public IndexDao indexDao() {
+		/**
+		 * 如果没有 @Configuration 注解,那么会调用两次 IndexDao1 的构造方法,
+		 * 如果有 @Configuration 注解,那么会调用一次 IndexDao1 的构造方法
+		 *
+		 * 第一次还是调用 indexDao1() 方法,到了第二次就直接从容器中去拿
+		 *
+		 * 如果 indexDao1 被 static 修饰,那么也会调用两次
+		 * 原因在 org.springframework.context.annotation.ConfigurationClassBeanDefinitionReader#loadBeanDefinitionsForBeanMethod
+		 * 方法中,会在里边进行一个判断
+		 * if (metadata.isStatic()) {
+		 * 	  // static @Bean method
+	 	 * 	  beanDef.setBeanClassName(configClass.getMetadata().getClassName());
+		 * 	  beanDef.setFactoryMethodName(methodName);
+	 	 * }
+		 */
+		// indexDao1();
+		// return new IndexDao();
+	// }
 }

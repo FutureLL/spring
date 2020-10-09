@@ -117,19 +117,49 @@ class ConstructorResolver {
 	public BeanWrapper autowireConstructor(String beanName, RootBeanDefinition mbd,
 			@Nullable Constructor<?>[] chosenCtors, @Nullable Object[] explicitArgs) {
 
+		// 实例一个 BeanWrapperImpl 对象很好理解
+		// 前面返回的 BeanWrapper 其实就是这个 BeanWrapperImpl
+		// 因为 BeanWrapper 是个接口
 		BeanWrapperImpl bw = new BeanWrapperImpl();
 		this.beanFactory.initBeanWrapper(bw);
 
+		/**
+		 * Spring 决定采用那个构造方法来实例化 bean
+		 * 代码执行到这里 Spring 已经决定要采用一个特殊构造方法来实例化化 bean
+		 * 但是到底用那个？可能类提供了很多构造方法。
+		 * 采用那个,Spring 有自己的一套规则,当他找到一个之后,他就会把这个构造方法赋值给 constructorToUse
+		 */
+		// constructorToUse: 决定使用那个构造方法来实例化对象
 		Constructor<?> constructorToUse = null;
+		/**
+		 * 构造方法的值,注意不是参数
+		 * 构造方法是通过反射来实例化一个对象
+		 * 在调用反射来实例化对象的时候,需要把具体的值
+		 * 这个变量就是用来记录这些值的,后面有证明
+		 * 但是这里需要注意的是 argsHolderToUse 是一个数据结构
+		 * argsToUse[] 才是真正的值
+		 */
+		// argsHolderToUse: 构造方法需要哪些参数
 		ArgumentsHolder argsHolderToUse = null;
+		// 存放构造方法的参数
 		Object[] argsToUse = null;
 
+		// 确定参数值列表
+		// argsToUse 可以有两种方法设置
+		// 第一种通过 beanDefinition 设置
+		// 第二种通过 xml 设置,但是需要解析 xml 才可以知道构造方法有哪些参数
+		/**
+		 * Spring 要确定三个参数: Constructor、paramsType、paramsValue,当这三个值确定的时候 Spring 就知道是那个构造方法
+		 */
 		if (explicitArgs != null) {
 			argsToUse = explicitArgs;
 		}
 		else {
 			Object[] argsToResolve = null;
 			synchronized (mbd.constructorArgumentLock) {
+				// 获取已解析的构造方法
+				// 一般不会有,因为构造方法一般会提供一个
+				// 除非有多个,那么才会存在已经解析完成的构造方法
 				constructorToUse = (Constructor<?>) mbd.resolvedConstructorOrFactoryMethod;
 				if (constructorToUse != null && mbd.constructorArgumentsResolved) {
 					// Found a cached constructor...
@@ -145,11 +175,15 @@ class ConstructorResolver {
 		}
 
 		if (constructorToUse == null || argsToUse == null) {
-			// Take specified constructors, if any.
+			/**
+			 * 然后根据你给的构造方法值来确定到底用哪个构造方法
+			 * 那么他是再怎么确定的呢？
+			 */
 			Constructor<?>[] candidates = chosenCtors;
 			if (candidates == null) {
 				Class<?> beanClass = mbd.getBeanClass();
 				try {
+					// 得到所有的构造方法
 					candidates = (mbd.isNonPublicAccessAllowed() ?
 							beanClass.getDeclaredConstructors() : beanClass.getConstructors());
 				}
@@ -173,29 +207,80 @@ class ConstructorResolver {
 				}
 			}
 
-			// Need to resolve the constructor.
+			// Take specified constructors, if any.
+			// 如果没有已经解析的构造方法,则需要去解析构造方法
+			// Need to resolve the constructor
+			// 判断构造方法是否为空,判断是否根据构造方法自动注入,找到为 true,否则为 false
 			boolean autowiring = (chosenCtors != null ||
 					mbd.getResolvedAutowireMode() == AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
 			ConstructorArgumentValues resolvedValues = null;
 
+			// 定义了最小参数个数
+			// 如果你给构造方法的参数列表给定了具体的值,那么这些值的个数就是构造方法参数的个数
 			int minNrOfArgs;
 			if (explicitArgs != null) {
 				minNrOfArgs = explicitArgs.length;
 			}
 			else {
+				// 实例一个对象,用来存放构造方法的参数
+				// 当中主要存放了构造方法参数值和参数值所对应的列表
 				ConstructorArgumentValues cargs = mbd.getConstructorArgumentValues();
 				resolvedValues = new ConstructorArgumentValues();
+				/**
+				 * 确定构造方法的参数数量,假设有如下配置:
+				 * 	   <bean id="future" class="com.future.Future">
+				 * 	   	   <constructor-arg index="0" value="str1"/>
+				 * 	   	   <constructor-arg index="1" value="str2"/>
+				 * 	   	   <constructor-arg index="2" value="str3"/>
+				 * 	   </bean>
+				 *
+				 * 在通过 Spring 内部给了一个值的情况下,那么表示你的构造方法的最小参数个数一定
+				 *
+				 * minNrOfArgs = 3
+				 */
 				minNrOfArgs = resolveConstructorArguments(beanName, mbd, bw, cargs, resolvedValues);
 			}
 
+			//根据构造方法的访问权限级别和参数数量进行排序
+			//怎么排序的呢？
+			/**
+			 *  有限反问权限,继而参数个数
+			 *  这个自己可以写个测试去看看到底是不是和我说的一样
+			 * 1. public Future(Object o1, Object o2, Object o3)
+			 * 2. public Future(Object o1, Object o2)
+			 * 3. public Future(Object o1)
+			 * 4. protected Future(Integer i, Object o1, Object o2, Object o3)
+			 * 5. protected Future(Integer i, Object o1, Object o2)
+			 * 6. protected Future(Integer i, Object o1)
+			 */
 			AutowireUtils.sortConstructors(candidates);
+			// 定义了一个差异遍历,这个变量很有分量,后面有注释(差异变量)
+			// 默认是int的最大值
 			int minTypeDiffWeight = Integer.MAX_VALUE;
+			// 会有歧义的构造方法？何谓有歧义的构造方法？(构造方法参数个数相同,但参数类型不同)
 			Set<Constructor<?>> ambiguousConstructors = null;
 			LinkedList<UnsatisfiedDependencyException> causes = null;
 
+			// 循环所有的构造方法
 			for (Constructor<?> candidate : candidates) {
 				Class<?>[] paramTypes = candidate.getParameterTypes();
 
+				/**
+				 * 这个判断别看只有一行代码理解起来很费劲
+				 * 首先 constructorToUse != null 这个很好理解,
+				 * 前面已经说过首先 constructorToUse 主要是用来装已经解析过了并且在使用的构造方法
+				 * 只有在他等于空的情况下,才有继续的意义,因为下面如果解析到了一个符合的构造方法
+				 * 就会赋值给这个变量（下面注释有写）。故而如果这个变量不等于null就不需要再进行解析了,说明spring已经
+				 * 找到一个合适的构造方法,直接使用便可以
+				 * argsToUse.length > paramTypes.length 这个代码就相当复杂了
+				 * 首先假设 argsToUse = [1, "luban", obj]
+				 * 那么回去匹配到上面的构造方法的 1 和 5
+				 * 由于构造方法 1 有更高的访问权限,所有选择 1,尽管 5 看起来更加匹配
+				 * 但是我们看 2,直接参数个数就不对所以直接忽略
+				 *
+				 * 第一次进入为空,会在后边进行赋值
+				 * 第二次进入这个循环 constructorToUse 才不为空,才会进行后边的长度判断,因为长度已经排序好了,从长道短,所以不会出现大于的情况
+				 */
 				if (constructorToUse != null && argsToUse != null && argsToUse.length > paramTypes.length) {
 					// Already found greedy constructor that can be satisfied ->
 					// do not look any further, there are only less greedy constructors left.
@@ -208,13 +293,28 @@ class ConstructorResolver {
 				ArgumentsHolder argsHolder;
 				if (resolvedValues != null) {
 					try {
+						// 判断是否加了 ConstructorProperties 注解如果加了则把值取出来
+						// 可以写个代码测试一下
+						// @ConstructorProperties(value = {"xxx", "111"})
 						String[] paramNames = ConstructorPropertiesChecker.evaluate(candidate, paramTypes.length);
 						if (paramNames == null) {
 							ParameterNameDiscoverer pnd = this.beanFactory.getParameterNameDiscoverer();
 							if (pnd != null) {
+								// 获取构造方法参数名称列表
+								/**
+								 * 假设你有一个（String luban,Object zilu）
+								 * 则 paramNames=[luban,zilu]
+								 */
 								paramNames = pnd.getParameterNames(candidate);
 							}
 						}
+						// 获取构造方法参数值列表
+						/**
+						 * 这个方法比较复杂
+						 * 因为 Spring 只能提供字符串的参数值
+						 * 故而需要进行转换
+						 * argsHolder 所包含的值就是转换之后的
+						 */
 						argsHolder = createArgumentArray(beanName, mbd, resolvedValues, bw, paramTypes, paramNames,
 								getUserDeclaredConstructor(candidate), autowiring, candidates.length == 1);
 					}
@@ -238,6 +338,29 @@ class ConstructorResolver {
 					argsHolder = new ArgumentsHolder(explicitArgs);
 				}
 
+				/**
+				 * typeDiffWeight 差异量,何谓差异量呢？
+				 * argsHolder.arguments 和 paramTypes 之间的差异
+				 * 每个参数值得类型与构造方法参数列表的类型直接的差异
+				 * 通过这个差异量来衡量或者确定一个合适的构造方法
+				 *
+				 * 值得注意的是 constructorToUse=candidate
+				 *
+				 * 第一次循环一定会 typeDiffWeight < minTypeDiffWeight,因为 minTypeDiffWeight 的值非常大
+				 * 然后每次循环会把 typeDiffWeight 赋值给 minTypeDiffWeight（minTypeDiffWeight = typeDiffWeight）
+				 * else if (constructorToUse != null && typeDiffWeight == minTypeDiffWeight)
+				 * 第一次循环肯定不会进入这个
+				 * 第二次如果进入了这个分支代表什么？
+				 * 代表有两个构造方法都符合我们要求？那么 Spring 有迷茫了（Spring经常在迷茫）
+				 * spring 迷茫了怎么办？
+				 * ambiguousConstructors.add(candidate);
+				 * 顾名思义。。。。
+				 * ambiguousConstructors = null 非常重要？
+				 * 为什么重要,因为需要清空
+				 * 这也解释了为什么他找到两个符合要求的方法不直接抛异常的原因
+				 * 如果这个 ambiguousConstructors 一直存在,spring会在循环外面去exception
+				 * 很牛逼呀！！！！
+				 */
 				int typeDiffWeight = (mbd.isLenientConstructorResolution() ?
 						argsHolder.getTypeDifferenceWeight(paramTypes) : argsHolder.getAssignabilityWeight(paramTypes));
 				// Choose this constructor if it represents the closest match.
@@ -257,6 +380,8 @@ class ConstructorResolver {
 				}
 			}
 
+			// 循环结束
+			// 没有找打合适的构造方法
 			if (constructorToUse == null) {
 				if (causes != null) {
 					UnsatisfiedDependencyException ex = causes.removeLast();
@@ -269,6 +394,18 @@ class ConstructorResolver {
 						"Could not resolve matching constructor " +
 						"(hint: specify index/type/name arguments for simple parameters to avoid type ambiguities)");
 			}
+			// 如果 ambiguousConstructors 还存在则异常？为什么会在上面方法中直接 exception？
+			// 如果提供了两个相同的构造方法,会先判断差异值,如果差异值相同,会进入下边的 else-if 抛出一个异常
+			/**
+			 * else if (constructorToUse != null && typeDiffWeight == minTypeDiffWeight) {
+			 *     if (ambiguousConstructors == null) {
+			 * 	       ambiguousConstructors = new LinkedHashSet<>();
+			 * 	       ambiguousConstructors.add(constructorToUse);
+			 *     }
+			 * 	   ambiguousConstructors.add(candidate);*
+			 * }
+			 */
+			// 上面注释当中有说明
 			else if (ambiguousConstructors != null && !mbd.isLenientConstructorResolution()) {
 				throw new BeanCreationException(mbd.getResourceDescription(), beanName,
 						"Ambiguous constructor matches found in bean '" + beanName + "' " +
@@ -277,11 +414,19 @@ class ConstructorResolver {
 			}
 
 			if (explicitArgs == null && argsHolderToUse != null) {
+				/*
+				 * 缓存相关信息,比如：
+				 *   1. 已解析出的构造方法对象 resolvedConstructorOrFactoryMethod
+				 *   2. 构造方法参数列表是否已解析标志 constructorArgumentsResolved
+				 *   3. 参数值列表 resolvedConstructorArguments 或 preparedConstructorArguments
+				 *   这些信息可用在其他地方,用于进行快捷判断
+				 */
 				argsHolderToUse.storeCache(mbd, constructorToUse);
 			}
 		}
 
 		Assert.state(argsToUse != null, "Unresolved constructor arguments");
+		// 使用反射创建实例 lookup-method 通过 CGLIB 增强 bean 实例
 		bw.setBeanInstance(instantiate(beanName, mbd, constructorToUse, argsToUse));
 		return bw;
 	}
@@ -297,6 +442,7 @@ class ConstructorResolver {
 						this.beanFactory.getAccessControlContext());
 			}
 			else {
+				// System.getSecurityManager() == null
 				return strategy.instantiate(mbd, beanName, this.beanFactory, constructorToUse, argsToUse);
 			}
 		}

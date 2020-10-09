@@ -60,6 +60,8 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
 		// Don't override the class with CGLIB if no overrides.
+		// 检查 bean 配置中是否配置了 lookup-method 或 replace-method
+		// 如果配置了就需要使用 CGLIB 构建 bean 对象
 		if (!bd.hasMethodOverrides()) {
 			Constructor<?> constructorToUse;
 			synchronized (bd.constructorArgumentLock) {
@@ -75,8 +77,10 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 									(PrivilegedExceptionAction<Constructor<?>>) clazz::getDeclaredConstructor);
 						}
 						else {
+							// 得到默认的构造方法,如果没有会默认一个无参构造方法
 							constructorToUse = clazz.getDeclaredConstructor();
 						}
+						// 赋值
 						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
 					}
 					catch (Throwable ex) {
@@ -84,6 +88,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 					}
 				}
 			}
+			// 进入 instantiateClass()
 			return BeanUtils.instantiateClass(constructorToUse);
 		}
 		else {
@@ -110,6 +115,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 			if (System.getSecurityManager() != null) {
 				// use own privileged to change accessibility (when security is on)
 				AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+					// 设置构造方法为可访问
 					ReflectionUtils.makeAccessible(ctor);
 					return null;
 				});
