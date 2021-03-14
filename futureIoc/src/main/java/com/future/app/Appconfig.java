@@ -41,10 +41,10 @@ import org.springframework.context.annotation.*;
  * 加了 @EnableAspectJAutoProxy 注解,Spring 就会加入一个后置处理器,专门用来处理 AOP,增强代理
  */
 
-@ComponentScan("com.future")
+@ComponentScan("com.future.circular")
 @Configuration
-@EnableAspectJAutoProxy
-@ImportResource("classpath:spring.xml")
+// @EnableAspectJAutoProxy
+// @ImportResource("classpath:spring.xml")
 public class Appconfig {
 
 	// @Bean

@@ -412,6 +412,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			throws BeansException {
 
 		Object result = existingBean;
+		// 执行后置处理器 BeanPostProcessor 的 postProcessBeforeInitialization() 方法
 		for (BeanPostProcessor processor : getBeanPostProcessors()) {
 			Object current = processor.postProcessBeforeInitialization(result, beanName);
 			if (current == null) {
@@ -427,6 +428,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			throws BeansException {
 
 		Object result = existingBean;
+		// 执行后置处理器 BeanPostProcessor 的 postProcessAfterInitialization() 方法
 		for (BeanPostProcessor processor : getBeanPostProcessors()) {
 			// 进入 postProcessAfterInitialization() 这是一个接口,
 			// 进入到 AbstractAutoProxyCreator 实现类的 postProcessAfterInitialization() 方法
@@ -573,6 +575,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			 *
 			 * 若 bean 的配置信息中配置了 lookup-method 和 replace-method，则会使用 CGLIB 增强 bean 实例。
 			 * 关于lookup-method和replace-method后面再说。
+			 *
+			 * createBeanInstance() 方法里边执行了后置处理器进行处理
 			 */
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
@@ -617,9 +621,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		Object exposedObject = bean;
 		try {
 			// 设置属性,非常重要
+			// 执行后置处理器
 			populateBean(beanName, mbd, instanceWrapper);
 			// 将原生对象变成代理对象
 			// 执行 Spring 所有的后置处理器，Aop 就是在这里完成的处理
+			// 执行后置处理器
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
 		catch (Throwable ex) {
@@ -972,8 +978,10 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		Object exposedObject = bean;
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
+				// 调用了 SmartInstantiationAwareBeanPostProcessor 的 getEarlyBeanReference() 方法
 				if (bp instanceof SmartInstantiationAwareBeanPostProcessor) {
 					SmartInstantiationAwareBeanPostProcessor ibp = (SmartInstantiationAwareBeanPostProcessor) bp;
+					// 解读循环依赖
 					exposedObject = ibp.getEarlyBeanReference(exposedObject, beanName);
 				}
 			}
@@ -1101,6 +1109,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 */
 	protected void applyMergedBeanDefinitionPostProcessors(RootBeanDefinition mbd, Class<?> beanType, String beanName) {
 		for (BeanPostProcessor bp : getBeanPostProcessors()) {
+			// 调用 MergedBeanDefinitionPostProcessor 的 postProcessMergedBeanDefinition() 方法
 			if (bp instanceof MergedBeanDefinitionPostProcessor) {
 				MergedBeanDefinitionPostProcessor bdp = (MergedBeanDefinitionPostProcessor) bp;
 				bdp.postProcessMergedBeanDefinition(mbd, beanType, beanName);
@@ -1154,6 +1163,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// 第一个后置处理器 InstantiationAwareBeanPostProcessor
 			if (bp instanceof InstantiationAwareBeanPostProcessor) {
 				InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
+				// 后置处理器的 postProcessBeforeInstantiation() 方法
 				Object result = ibp.postProcessBeforeInstantiation(beanClass, beanName);
 				if (result != null) {
 					return result;
@@ -1240,6 +1250,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// Candidate constructors for autowiring?
 		// 由后置处理器决定返回哪些构造方法
+		// 第二次执行后置处理器
 		// 特殊(有参)构造方法 --- new，ctors 不为空，会走下边的 if
 		// 默认构造方法默认没有构造方法，没有构造方法 ctors 为空，就不会走下边的 if
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
@@ -1340,6 +1351,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		if (beanClass != null && hasInstantiationAwareBeanPostProcessors()) {
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
+				// 执行后置处理器的 SmartInstantiationAwareBeanPostProcessor 的 determineCandidateConstructors() 方法
 				if (bp instanceof SmartInstantiationAwareBeanPostProcessor) {
 					SmartInstantiationAwareBeanPostProcessor ibp = (SmartInstantiationAwareBeanPostProcessor) bp;
 					Constructor<?>[] ctors = ibp.determineCandidateConstructors(beanClass, beanName);
@@ -1443,6 +1455,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// Give any InstantiationAwareBeanPostProcessors the opportunity to modify the
 		// state of the bean before properties are set. This can be used, for example,
 		// to support styles of field injection.
+		// 第五次执行后置处理器 InstantiationAwareBeanPostProcessor 实现了 postProcessAfterInstantiation() 方法
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
@@ -1487,6 +1500,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// 获取 bean 的后置处理器
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
 				// 通过后置处理器做值设置
+				// 第六次调用后置处理器 InstantiationAwareBeanPostProcessor 实现了 postProcessPropertyValues() 方法
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
 					// 获取到一些属性
 					InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
@@ -1873,6 +1887,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// 第八次执行后置处理器
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
+
+		// 还有一次执行后置处理器,是在 bean 销毁的时候
 
 		return wrappedBean;
 	}
