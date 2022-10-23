@@ -169,8 +169,7 @@ public abstract class AbstractApplicationEventMulticaster
 	 * @return a Collection of ApplicationListeners
 	 * @see org.springframework.context.ApplicationListener
 	 */
-	protected Collection<ApplicationListener<?>> getApplicationListeners(
-			ApplicationEvent event, ResolvableType eventType) {
+	protected Collection<ApplicationListener<?>> getApplicationListeners(ApplicationEvent event, ResolvableType eventType) {
 
 		Object source = event.getSource();
 		Class<?> sourceType = (source != null ? source.getClass() : null);
@@ -212,7 +211,8 @@ public abstract class AbstractApplicationEventMulticaster
 	 * @return the pre-filtered list of application listeners for the given event and source type
 	 */
 	private Collection<ApplicationListener<?>> retrieveApplicationListeners(
-			ResolvableType eventType, @Nullable Class<?> sourceType, @Nullable ListenerRetriever retriever) {
+			ResolvableType eventType, @Nullable Class<?> sourceType, @Nullable ListenerRetriever retriever
+	) {
 
 		List<ApplicationListener<?>> allListeners = new ArrayList<>();
 		Set<ApplicationListener<?>> listeners;
@@ -297,13 +297,15 @@ public abstract class AbstractApplicationEventMulticaster
 	 * @return whether the given listener should be included in the candidates
 	 * for the given event type
 	 */
-	protected boolean supportsEvent(
-			ApplicationListener<?> listener, ResolvableType eventType, @Nullable Class<?> sourceType) {
+	protected boolean supportsEvent(ApplicationListener<?> listener, ResolvableType eventType, @Nullable Class<?> sourceType) {
 
 		// 判断监听器是否属于 GenericApplicationListener
 		// public class MyListener implements GenericApplicationListener {}
-		GenericApplicationListener smartListener = (listener instanceof GenericApplicationListener ?
-				(GenericApplicationListener) listener : new GenericApplicationListenerAdapter(listener));
+		GenericApplicationListener smartListener = (listener instanceof GenericApplicationListener
+				? (GenericApplicationListener) listener
+				: new GenericApplicationListenerAdapter(listener)
+		);
+
 		return (smartListener.supportsEventType(eventType) && smartListener.supportsSourceType(sourceType));
 	}
 

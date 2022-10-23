@@ -127,7 +127,7 @@ public final class SpringFactoriesLoader {
 	}
 
 	private static Map<String, List<String>> loadSpringFactories(@Nullable ClassLoader classLoader) {
-		// 从缓存中获取
+		// 从缓存中获取,第一次进入肯定没有
 		MultiValueMap<String, String> result = cache.get(classLoader);
 		if (result != null) {
 			return result;
@@ -135,10 +135,12 @@ public final class SpringFactoriesLoader {
 
 		try {
 			// 获取 Spring 的运行环境,可以理解为发布之后的运行环境
+			// 不同jar包的 META-INF/spring.factories 不同
 			Enumeration<URL> urls = (classLoader != null
 					? classLoader.getResources(FACTORIES_RESOURCE_LOCATION)
 					: ClassLoader.getSystemResources(FACTORIES_RESOURCE_LOCATION));
 			result = new LinkedMultiValueMap<>();
+			// 循环遍历
 			while (urls.hasMoreElements()) {
 				URL url = urls.nextElement();
 				UrlResource resource = new UrlResource(url);
@@ -154,6 +156,7 @@ public final class SpringFactoriesLoader {
 					}
 				}
 			}
+			// 存入缓存中
 			cache.put(classLoader, result);
 			return result;
 		}
